@@ -226,7 +226,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             }
             
             guard set.isVisible else { continue }
-            
+            print("barDataSet i \(i)")
             drawDataSet(context: context, dataSet: set, index: i)
         }
         
@@ -253,61 +253,19 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         context.saveGState()
         defer { context.restoreGState() }
         
-        // draw the bar shadow before the values
-        if dataProvider.isDrawBarShadowEnabled
-        {
-            guard let barData = dataProvider.barData else { return }
-            
-            let barWidth = barData.barWidth
-            let barWidthHalf = barWidth / 2.0
-            var x: Double = 0.0
-            
-            let range = (0..<dataSet.entryCount).clamped(to: 0..<Int(ceil(Double(dataSet.entryCount) * animator.phaseX)))
-            for i in range
-            {
-                guard let e = dataSet.entryForIndex(i) as? BarChartDataEntry else { continue }
-                
-                x = e.x
-                
-                _barShadowRectBuffer.origin.x = CGFloat(x - barWidthHalf)
-                _barShadowRectBuffer.size.width = CGFloat(barWidth)
-                
-                trans.rectValueToPixel(&_barShadowRectBuffer)
-                
-                guard viewPortHandler.isInBoundsLeft(_barShadowRectBuffer.origin.x + _barShadowRectBuffer.size.width) else { continue }
-                
-                guard viewPortHandler.isInBoundsRight(_barShadowRectBuffer.origin.x) else { break }
-                
-                _barShadowRectBuffer.origin.y = viewPortHandler.contentTop
-                _barShadowRectBuffer.size.height = viewPortHandler.contentHeight
-                
-                context.setFillColor(dataSet.barShadowColor.cgColor)
-                context.fill(_barShadowRectBuffer)
-            }
-        }
-        
         var buffer = _buffers[index]
         
-        // draw the bar shadow before the values
-        if dataProvider.isDrawBarShadowEnabled
-        {
-            for barRect in buffer where viewPortHandler.isInBoundsLeft(barRect.origin.x + barRect.size.width)
-            {
-                guard viewPortHandler.isInBoundsRight(barRect.origin.x) else { break }
-                
-                context.setFillColor(dataSet.barShadowColor.cgColor)
-                context.fill(barRect)
-            }
-        }
+       
         
         // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrdereredElements
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
         
-        for j in (0 ... buffer.indices.count - 1).reversed()
+        for j in (0 ... buffer.indices.count - 1)
         {
             //            buffer[j] = CGRect(x: buffer[j].origin.x, y: buffer[j].origin.y, width: 50, height: buffer[j].width)
-            let barRect = buffer[j]
+            print("barDataSet j \(j)")
+            let barRect = buffer[j % 2 == 0 ? j + 1: j - 1]
             
             guard viewPortHandler.isInBoundsLeft(barRect.origin.x + barRect.size.width) else { continue }
             guard viewPortHandler.isInBoundsRight(barRect.origin.x) else { break }
@@ -316,9 +274,9 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             context.setFillColor(dataSet.color(atIndex: j).cgColor)
             
             
-            let cornerRadius =  CGSize(width: barRect.width * 2 , height: barRect.width * 2 )
+            let cornerRadius =  CGSize(width: 500 , height: 500)
             
-            let bezierPath = UIBezierPath(roundedRect: CGRect(x: barRect.origin.x, y: barRect.origin.y, width: barRect.width, height: barRect.height  + 500 ), byRoundingCorners: UIRectCorner.allCorners, cornerRadii: cornerRadius)
+            let bezierPath = UIBezierPath(roundedRect: CGRect(x: barRect.origin.x, y: barRect.origin.y, width: barRect.width, height: barRect.height  +  (500)), byRoundingCorners:UIRectCorner.allCorners, cornerRadii: cornerRadius)
             
             let roundedPath = bezierPath.cgPath
             
@@ -333,21 +291,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 context.setLineWidth(borderWidth)
                 context.stroke(barRect)
             }
-            
-            // Create and append the corresponding accessibility element to accessibilityOrderedElements
-            if let chart = dataProvider as? BarChartView
-            {
-                let element = createAccessibleElement(withIndex: j,
-                                                      container: chart,
-                                                      dataSet: dataSet,
-                                                      dataSetIndex: index,
-                                                      stackSize: stackSize)
-                { (element) in
-                    element.accessibilityFrame = barRect
-                }
-                
-                accessibilityOrderedElements[j/stackSize].append(element)
-            }
+        
         }
     }
     
